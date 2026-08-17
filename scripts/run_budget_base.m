@@ -4,7 +4,7 @@ repo_root = fileparts(fileparts(mfilename('fullpath')));
 addpath(genpath(fullfile(repo_root, 'src')));
 yalmip('clear');
 
-N = 30;
+N = 50;
 data = ASPpol_input(N);
 param = ASPpol_param(data);
 

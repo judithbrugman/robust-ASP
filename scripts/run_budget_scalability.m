@@ -10,7 +10,7 @@ output_file = fullfile(fileparts(mfilename('fullpath')), '..', 'results', ...
 
 results = struct([]);
 
-for k = 75:numel(N_values)
+for k = 1:numel(N_values)
     N = N_values(k);
     fprintf('\n=== N = %d ===\n', N);
 
