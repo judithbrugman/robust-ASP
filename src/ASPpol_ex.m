@@ -103,13 +103,15 @@ function [schedule, costs] = compute_givenU(U, data, options)
     s = sdpvar(N, 1);
     tau = sdpvar(1, 1);
     wait = sdpvar(L, N + 1, 'full');
-
+    waitNext = wait(:, 2:N+1);
+    waitRecursion = wait(:, 1:N) + U - repmat(s', L, 1);
+    
     constraints = [
         sum(s) == data.T
         s >= 0
         wait(:) >= 0
         wait(:, 1) == 0
-        wait(:, 2:N+1) >= wait(:, 1:N) + U - repmat(s', L, 1)
+        waitNext(:) >= waitRecursion(:)
         data.cw * sum(wait(:, 1:N), 2) ...
             + data.ci * ( ...
                 wait(:, N) ...
