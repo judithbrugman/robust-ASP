@@ -1,0 +1,175 @@
+function [schedule, costs, time, U_wc, comp_wc] = ASPpol_ex(data, param, lb)
+%ASPPOL_EX Compute the exact robust solution using the cutting-set method.
+
+    tic;
+
+    %% Parameters
+    tolerance = 1e-2;
+    options = sdpsettings('solver', 'gurobi', 'verbose', 0);
+
+    %% Initialize with lower-bound scenario set
+    U = lb.U;
+    schedule = lb.schedule;
+    lowerBound = lb.cost;
+
+    %% Cutting-set algorithm
+    while true
+
+        % Find worst-case scenario for the current schedule
+        [xWorst, upperBound] = solve_worst_case( ...
+            schedule, data, param, options);
+
+        gap = upperBound - lowerBound;
+
+        if gap <= tolerance
+            break;
+        end
+
+        % Add worst-case scenario
+        U = [U; xWorst'];
+
+        % Re-optimize the schedule over the enlarged scenario set
+        [schedule, lowerBound] = compute_givenU(U, data, options);
+
+    end
+
+    %% Store results
+    costs = lowerBound;
+    [U_wc, comp_wc] = find_worstcase(schedule, costs, U, data);
+
+    time = toc;
+
+end
+
+
+%% Worst-case scenario for a fixed schedule
+function [xWorst, costWorst] = solve_worst_case( ...
+        schedule, data, param, options)
+
+    N = data.N;
+    D = data.D;
+    d = data.d;
+    N2 = param.N2;
+
+    x_upper = d(1:N);
+    bigM = max(sum(x_upper), data.T);
+
+    yalmip('clear');
+
+    x = sdpvar(N2, 1);
+    wait = sdpvar(N + 1, 1);
+    z = binvar(N, 1);
+
+    objective = ...
+        data.cw * sum(wait(1:N)) ...
+        + data.ci * ( ...
+            wait(N) ...
+            + sum(schedule(1:N-1)) ...
+            - sum(x(1:N-1))) ...
+        + data.co * wait(N+1);
+
+    constraints = [
+        D * x <= d
+        wait(1) == 0
+        wait(2:N+1) >= 0
+        wait(2:N+1) >= wait(1:N) + x(1:N) - schedule
+        wait(2:N+1) <= bigM * (1 - z)
+        wait(2:N+1) <= wait(1:N) + x(1:N) - schedule + bigM * z
+    ];
+
+    diagnostics = optimize(constraints, -objective, options);
+
+    if diagnostics.problem ~= 0
+        error('Worst-case optimization failed: %s', ...
+            diagnostics.info);
+    end
+
+    xWorst = value(x);
+    costWorst = value(objective);
+
+end
+
+
+%% Solve the ASP for a finite scenario set
+function [schedule, costs] = compute_givenU(U, data, options)
+
+    N = data.N;
+    L = size(U, 1);
+
+    U = U(:, 1:N);
+
+    yalmip('clear');
+
+    s = sdpvar(N, 1);
+    tau = sdpvar(1, 1);
+    wait = sdpvar(L, N + 1, 'full');
+
+    constraints = [
+        sum(s) == data.T
+        s >= 0
+        wait(:) >= 0
+        wait(:, 1) == 0
+        wait(:, 2:N+1) >= wait(:, 1:N) + U - repmat(s', L, 1)
+        data.cw * sum(wait(:, 1:N), 2) ...
+            + data.ci * ( ...
+                wait(:, N) ...
+                + sum(s(1:N-1)) ...
+                - sum(U(:, 1:N-1), 2)) ...
+            + data.co * wait(:, N+1) <= tau
+    ];
+
+    diagnostics = optimize(constraints, tau, options);
+
+    if diagnostics.problem ~= 0
+        error('Finite-scenario optimization failed: %s', diagnostics.info);
+    end
+
+    schedule = value(s);
+    costs = value(tau);
+
+end
+
+
+%% Identify worst-case scenarios in the final scenario set
+function [U_wc, comp] = find_worstcase(schedule, robustCost, U, data)
+
+    N = data.N;
+    C = size(U, 1);
+
+    isWorstCase = false(C, 1);
+    comp = zeros(C, 3);
+
+    for i = 1:C
+
+        x = U(i, 1:N)';
+        wait = zeros(N + 1, 1);
+
+        for n = 2:N+1
+            wait(n) = max( ...
+                wait(n-1) + x(n-1) - schedule(n-1), ...
+                0);
+        end
+
+        waitingCost = data.cw * sum(wait(1:N));
+
+        idleCost = data.ci * ( ...
+            wait(N) ...
+            + sum(schedule(1:N-1)) ...
+            - sum(x(1:N-1)));
+
+        overtimeCost = data.co * wait(N+1);
+
+        scenarioCost = waitingCost + idleCost + overtimeCost;
+
+        comp(i, :) = [waitingCost, idleCost, overtimeCost];
+
+        if scenarioCost >= robustCost - 1e-3
+            isWorstCase(i) = true;
+        end
+
+    end
+
+    U_wc = U(isWorstCase, :);
+    comp = comp(isWorstCase, :);
+
+end
