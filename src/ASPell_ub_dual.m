@@ -45,9 +45,7 @@ function [schedule, costs, time, z] = ASPell_ub_dual(data, param)
     %% Objective and optimization
     objective = T * y - trace(A' * V);
 
-    options = sdpsettings( ...
-        'solver', 'mosek', ...
-        'verbose', 0);
+    options = sdpsettings('solver', 'gurobi', 'verbose', 0);
 
     diagnostics = optimize(constraints, objective, options);
 
