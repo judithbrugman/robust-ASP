@@ -16,7 +16,7 @@ function [schedule, costs, time, U_hill] = ASPell_lb(data, param, ub)
 
     sqrtQ = sqrtm(Q);
 
-    options = sdpsettings('solver', 'mosek', 'verbose', 0);
+    options = sdpsettings('solver', 'gurobi', 'verbose', 0);
 
     %% Construct initial candidate scenarios
     % The initial set contains x* and feasible ratios V_m / w_m.
