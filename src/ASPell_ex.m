@@ -5,7 +5,7 @@ function [schedule, costs, time, U_wc, comp_wc] = ASPell_ex(data, param, lb)
 
     %% Parameters
     tolerance = 1e-2;
-    options = sdpsettings('solver', 'mosek', 'verbose', 0);
+    options = sdpsettings('solver', 'gurobi', 'verbose', 0);
 
     %% Initialize with lower-bound scenario set
     U = lb.U;
