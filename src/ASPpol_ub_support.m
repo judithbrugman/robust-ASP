@@ -53,9 +53,7 @@ function [schedule, costs, time, z] = ASPpol_ub_support(data, param)
     ];
 
     %% Optimize
-    options = sdpsettings( ...
-        'solver', 'mosek', ...
-        'verbose', 0);
+    options = sdpsettings('solver', 'gurobi', 'verbose', 0);
 
     diagnostics = optimize(constraints, tau, options);
 
