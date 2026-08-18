@@ -9,10 +9,9 @@ This repository contains implementations of the proposed methods for polyhedral 
 
 The numerical experiments in the paper were run using:
 
-- MATLAB R2023b
-- YALMIP R20210331
-- MOSEK 10.0.27
-- Gurobi 9.5.1
+- MATLAB R2026a
+- YALMIP R20250626
+- Gurobi 13.0.0
 
 YALMIP and the required solvers should be installed separately and available on the MATLAB path.
 
@@ -42,7 +41,7 @@ run('scripts/run_budget_base.m')
 
 The `results/` directory contains MATLAB data files with stored outputs of the numerical experiments.
 
-The stored scalability results cover instances up to `N = 80`. The paper reports additional scalability results up to `N = 100`.
+The stored scalability results cover instances up to `N = 100`. 
 
 Computation times may differ from those reported in the paper depending on hardware and software versions.
 
